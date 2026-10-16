@@ -10,50 +10,77 @@ import duckdb
 import pandas as pd
 import pytest
 
-DB_Path = "data/data.duckdb"
+# Try to load local .env file if it exists (won't crash if running on GitHub Actions)
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
+DB_PATH = "data/data.duckdb"
+SYMBOL = "AAPL"
 
 def extract_data():
-    # Extract data from the API will need to change to URL API to something more desired
-    url = "https://api.open-meteo.com/v1/forecast?latitude=34.9496&longitude=-81.9199&current=temperature_2m,relative_humidity_2m,wind_speed_10m"
+    # This checks os.environ, which will find the .env file locally 
+    # OR the GitHub Repository Secret in production!
+    api_key = os.environ.get("STOCK_API_KEY")
+    
+    if not api_key:
+        raise ValueError("STOCK_API_KEY environment variable is missing!")
+        
+    url = f"https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol={SYMBOL}&apikey={api_key}"
+    
     response = requests.get(url, timeout=10)
     response.raise_for_status()
     data = response.json()
-
-    ####Definitely will have to go in and change some code here that involves temperature, humidity, and wind speed.
     
-    current = data.get("current", {})
+    time_series = data.get("Time Series (Daily)", {})
+    if not time_series:
+        raise ValueError(f"API Error or Rate Limit Reached: {data}")
+    
+    latest_date = sorted(time_series.keys())[-1]
+    day_data = time_series[latest_date]
+    
     record = {
-        "timestamp": current.get("time", dt.utcnow().isoformat()),
-        "temperature_c": current.get("temperature_2m"),
-        "humidity": current.get("relative_humidity_2m"),
-        "wind_speed": current.get("wind_speed_10m")
+        "date": latest_date,
+        "symbol": SYMBOL,
+        "open_price": float(day_data.get("1. open")),
+        "high_price": float(day_data.get("2. high")),
+        "low_price": float(day_data.get("3. low")),
+        "close_price": float(day_data.get("4. close")),
+        "volume": int(day_data.get("5. volume"))
     }
     return pd.DataFrame([record])
+
+# (validate_data and load_data remain the same)
 
 def validate_data(df):
     if df.empty:
         raise ValueError("Extracted dataframe is empty.")
     
-    if df["timestamp"].isnull().any():
-        raise AssertionError("Data Quality Failure: Null values found in timestamp primary key.")
-    
-    temp = df["temperature_c"].iloc[0]
-    if temp is not None and not (-50 <= temp <= 60):
-        raise AssertionError(f"Data Quality Failure: Temperature {temp}°C is out of realistic bounds.")
-    
+    # Data quality check: Stock price cannot be 0 or negative
+    close_val = df["close_price"].iloc[0]
+    if close_val <= 0:
+        raise AssertionError(f"Data Quality Failure: Close price {close_val} is invalid.")
+        
     print("Validation Check: Passed successfully.")
 
 def load_data(df):
     os.makedirs("data", exist_ok=True)
-    conn = duckdb.connect(DB_Path)
+    conn = duckdb.connect(DB_PATH)
     
+    # Updated schema for financial metrics with a composite primary key (date + symbol)
     conn.execute("""
-        CREATE TABLE IF NOT EXISTS weather_metrics (
-            timestamp TIMESTAMP PRIMARY KEY,
-            temperature_c DOUBLE,
-            humidity DOUBLE,
-            wind_speed DOUBLE,
-            loaded_at TIMESTAMP
+        CREATE TABLE IF NOT EXISTS stock_metrics (
+            date DATE,
+            symbol VARCHAR,
+            open_price DOUBLE,
+            high_price DOUBLE,
+            low_price DOUBLE,
+            close_price DOUBLE,
+            volume BIGINT,
+            loaded_at TIMESTAMP,
+            PRIMARY KEY (date, symbol)
         )
     """)
     
@@ -61,18 +88,18 @@ def load_data(df):
     
     # Incremental load (Upsert pattern)
     conn.execute("""
-        INSERT INTO weather_metrics 
+        INSERT INTO stock_metrics 
         SELECT * FROM df 
-        ON CONFLICT(timestamp) DO NOTHING
+        ON CONFLICT(date, symbol) DO NOTHING
     """)
     
-    count = conn.execute("SELECT COUNT(*) FROM weather_metrics").fetchone()[0]
+    count = conn.execute("SELECT COUNT(*) FROM stock_metrics").fetchone()[0]
     print(f"Load Check: Success. Total rows in warehouse: {count}")
     conn.close()
 
 if __name__ == "__main__":
-    print("Starting ELT pipeline execution...")
+    print(f"Starting Stock ELT pipeline for {SYMBOL}...")
     df = extract_data()
     validate_data(df)
     load_data(df)
-    print("ELT pipeline completed.")
+    print("Stock ELT pipeline completed.")

@@ -1,3 +1,4 @@
 Note4Self.txt
 .venv/ 
 .github/workflows/elt.yml
+.env
