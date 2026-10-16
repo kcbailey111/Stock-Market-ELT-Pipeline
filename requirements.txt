@@ -2,4 +2,4 @@ requests
 duckdb
 pandas
 pytest
-dotenv
+python-dotenv

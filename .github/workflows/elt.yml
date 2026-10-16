@@ -2,10 +2,8 @@ name: Automated ELT Pipeline
 
 on:
   schedule:
-    - cron: '0 */6 * * *'  # Runs every 6 hours
-    workflow_dispatch:      # Allows manual trigger from GitHub UI
-  push:
-    branches: [ main ]
+    - cron: '0 22 * * 1-5'  # Weekdays at 22:00 UTC, after US market close
+  workflow_dispatch:        # Allows manual trigger from GitHub UI
 
 jobs:
   run-elt:
