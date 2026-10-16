@@ -1,4 +1,4 @@
 Note4Self.txt
 .venv/ 
-.github/workflows/elt.yml
+## .github/workflows/elt.yml ## This is the GitHub Actions workflow file for the ELT pipeline
 .env

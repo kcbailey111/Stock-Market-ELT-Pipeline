@@ -18,8 +18,10 @@ except ImportError:
     pass
 
 DB_PATH = "data/data.duckdb"
-SYMBOL = "AAPL"
+# Symbol is the stock symbol to extract data for
+SYMBOL = "KO"
 
+# Extract data from the API
 def extract_data():
     # This checks os.environ, which will find the .env file locally 
     # OR the GitHub Repository Secret in production!
@@ -84,7 +86,7 @@ def load_data(df):
         )
     """)
     
-    df["loaded_at"] = dt.utcnow()
+    df["loaded_at"] = dt.datetime.now(dt.timezone.utc)
     
     # Incremental load (Upsert pattern)
     conn.execute("""
