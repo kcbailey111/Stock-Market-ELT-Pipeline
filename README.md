@@ -73,7 +73,7 @@ Stock-Market-ELT-Pipeline/
 
 ### 1. Get an API key
 
-Sign up for a free key at [alphavantage.co/support/#api-key](https://www.alphavantage.co/support/#api-key).
+Sign up for a free key at [https://finnhub.io/dashboard](https://finnhub.io/dashboard).
 
 ### 2. Set up locally
 
