@@ -29,10 +29,10 @@ SECONDS_BETWEEN_REQUESTS = 15
 def extract_data(symbol):
     # This checks os.environ, which will find the .env file locally
     # OR the GitHub Repository Secret in production!
-    api_key = os.environ.get("STOCK_API_KEY")
+    api_key = os.environ.get("ALPHA_VANTAGE_API_KEY")
 
     if not api_key:
-        raise ValueError("STOCK_API_KEY environment variable is missing!")
+        raise ValueError("ALPHA_VANTAGE_API_KEY environment variable is missing!")
 
     url = f"https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol={symbol}&apikey={api_key}"
 

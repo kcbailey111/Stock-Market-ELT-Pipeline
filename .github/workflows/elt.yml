@@ -18,7 +18,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.14'
           cache: 'pip'
 
       - name: Install dependencies
@@ -28,7 +28,7 @@ jobs:
 
       - name: Run ELT Pipeline
         env:
-          STOCK_API_KEY: ${{ secrets.STOCK_API_KEY }}
+          ALPHA_VANTAGE_API_KEY: ${{ secrets.ALPHA_VANTAGE_API_KEY }}
         run: python pipeline.py
 
       - name: Commit and push updated database

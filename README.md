@@ -6,7 +6,7 @@ An automated, serverless ELT (Extract, Load, Transform) pipeline that pulls dail
 
 ```mermaid
 flowchart LR
-    A[Finnhub API] -->|Extract: requests| B[pandas DataFrame]
+    A[Alpha Vantage API] -->|Extract: requests| B[pandas DataFrame]
     B -->|Validate: data quality checks| C{Passed?}
     C -->|Yes| D[(DuckDB: stock_metrics)]
     C -->|No| E[Skip symbol, log error]
@@ -29,14 +29,18 @@ flowchart LR
 
 ## Tech Stack
 
-| Layer | Tool |
-|---|---|
-| Language | Python 3.11 |
-| Extraction | `requests` |
-| In-memory processing | `pandas` |
-| Warehouse | DuckDB (embedded, columnar) |
-| Orchestration | GitHub Actions (cron) |
-| Config | `python-dotenv` |
+| Layer | Tool | Version |
+|---|---|---|
+| Language | Python | 3.14 |
+| Source | Alpha Vantage REST API (`TIME_SERIES_DAILY`) | n/a |
+| Extraction | `requests` | 2.34.2 |
+| In-memory processing | `pandas` | 3.0.6 |
+| Warehouse | DuckDB (embedded, columnar) | 1.5.6 |
+| Orchestration | GitHub Actions (cron) | n/a |
+| Config | `python-dotenv` | 1.2.4 |
+| Testing | `pytest` | 9.1.1 |
+
+All Python dependencies are pinned in `requirements.txt` so every run, locally or in CI, installs the same versions.
 
 ## Data Model
 
@@ -73,7 +77,7 @@ Stock-Market-ELT-Pipeline/
 
 ### 1. Get an API key
 
-Sign up for a free key at [https://finnhub.io/dashboard](https://finnhub.io/dashboard).
+Sign up for a free key at [https://www.alphavantage.co/support/#api-key](https://www.alphavantage.co/support/#api-key).
 
 ### 2. Set up locally
 
@@ -91,7 +95,7 @@ pip install -r requirements.txt
 Create a `.env` file in the project root:
 
 ```
-STOCK_API_KEY=your_key_here
+ALPHA_VANTAGE_API_KEY=your_key_here
 ```
 
 ### 3. Run the pipeline
@@ -124,22 +128,22 @@ con.sql("""
 The workflow in `.github/workflows/elt.yml`:
 
 1. Runs Monday to Friday at 22:00 UTC, after the US market closes, or on demand from the **Actions** tab.
-2. Installs dependencies and runs `pipeline.py` using the `STOCK_API_KEY` repository secret.
+2. Installs dependencies and runs `pipeline.py` using the `ALPHA_VANTAGE_API_KEY` repository secret.
 3. Commits the updated `data/data.duckdb` with `[skip ci]` so the commit doesn't trigger another run.
 
-To enable it, go to **Settings → Secrets and variables → Actions → New repository secret** and add `STOCK_API_KEY`.
+To enable it, go to **Settings → Secrets and variables → Actions → New repository secret** and add `ALPHA_VANTAGE_API_KEY`.
 
 ## Design Decisions
 
 - **ELT instead of ETL.** Raw daily prices are stored as they arrive, and the analytics live in SQL views. That keeps the raw history intact and makes transforms easy to change without reloading data.
 - **DuckDB.** It's a columnar engine built for analytical queries, has no server to run, and the whole warehouse is a single file that can be versioned in git.
-- **Rate-limit awareness.** The Alpha Vantage free tier allows 25 requests per day. Five symbols on weekdays uses 5 per run, which leaves room for manual runs.
+- **Rate-limit awareness.** The Alpha Vantage free tier allows 5 requests per minute and 25 per day. The pipeline waits 15 seconds between symbols, and five symbols on weekdays uses 5 requests per run, which leaves room for manual runs.
 
 ## Roadmap
 
 - [ ] Add `pytest` unit tests for `validate_data` and the transforms
 - [ ] Move transforms into **dbt** models with tests and documentation
-- [ ] Add more sources, such as company fundamentals (`OVERVIEW`) and macro indicators (CPI, Treasury yields)
+- [ ] Add more sources, such as company profiles and fundamentals (Alpha Vantage `OVERVIEW`) and macro indicators (CPI, Treasury yields)
 - [ ] Build a dashboard (Streamlit or Evidence) on top of the views
 - [ ] Add failure alerts (email or Slack) from GitHub Actions
 - [ ] Move storage to cloud object storage (S3 or MotherDuck) instead of committing the database file
