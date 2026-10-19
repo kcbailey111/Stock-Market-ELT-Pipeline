@@ -3,3 +3,7 @@ Note4Self.txt
 ## .github/workflows/elt.yml ## This is the GitHub Actions workflow file for the ELT pipeline
 .env
 __pycache__/
+transform/target/
+transform/logs/
+transform/dbt_packages/
+logs/

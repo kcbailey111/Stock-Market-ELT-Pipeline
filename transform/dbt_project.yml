@@ -1,0 +1,28 @@
+# This is the settings file for the dbt project.
+# dbt reads it to learn the project name and where everything lives.
+
+name: stock_market
+version: "1.0.0"
+config-version: 2
+# "profile" points at the matching entry in profiles.yml, which says which database to use.
+profile: stock_market
+
+# Folders dbt should look in. Paths are relative to this file.
+model-paths: ["models"]
+seed-paths: ["seeds"]
+test-paths: ["tests"]
+macro-paths: ["macros"]
+# Where dbt writes the SQL it generates. This folder is gitignored.
+target-path: "target"
+clean-targets: ["target", "dbt_packages"]
+
+models:
+  stock_market:
+    # A view is a saved query. It stores no data; it re-reads the raw table
+    # every time you select from it. Good for a thin cleaning step.
+    staging:
+      +materialized: view
+    # A table copies the query results into a real table. Dashboards read these,
+    # so we want them stored rather than recomputed on every click.
+    marts:
+      +materialized: table

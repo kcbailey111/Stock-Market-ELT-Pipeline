@@ -1,0 +1,15 @@
+# Tests for the symbols seed, the CSV that maps each ticker to a company and sector.
+
+version: 2
+
+seeds:
+  - name: symbols
+    description: Reference list of tracked tickers with their GICS-style sector and industry. Add a row here whenever a symbol is added to SYMBOLS in pipeline.py.
+    columns:
+      - name: symbol
+        data_tests:
+          - unique
+          - not_null
+      - name: sector
+        data_tests:
+          - not_null

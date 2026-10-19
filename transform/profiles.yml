@@ -1,0 +1,14 @@
+# Tells dbt how to connect to the database.
+# Normally this file holds passwords and stays out of git. Ours only points at
+# a local file, so it is safe to commit.
+
+stock_market:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      # The same database file that pipeline.py writes to.
+      # env_var lets a CI run override the path; locally the default is used.
+      path: "{{ env_var('DUCKDB_PATH', '../data/data.duckdb') }}"
+      # How many models dbt builds at the same time.
+      threads: 4

@@ -1,0 +1,51 @@
+# Documentation and tests for the mart models: the dimension, the daily fact table, and the summary.
+
+version: 2
+
+models:
+  - name: dim_symbols
+    description: One row per tracked ticker with company and sector attributes, sourced from the symbols seed.
+    columns:
+      - name: symbol
+        data_tests:
+          - unique
+          - not_null
+
+  - name: fct_daily_prices
+    description: Daily prices per symbol enriched with returns and rolling averages. Grain is one row per symbol per trading day.
+    data_tests:
+      - unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [trade_date, symbol]
+    columns:
+      - name: symbol
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_symbols')
+                field: symbol
+      - name: daily_return
+        description: Close-to-close return versus the previous trading day in the warehouse (0.01 = 1%). Null on each symbol's first day.
+      - name: intraday_range_pct
+        description: High minus low as a fraction of the close, a simple measure of how much the price moved within the day.
+      - name: moving_avg_7d
+        description: Average close over the last 7 trading days, including the current one. Uses fewer days when less history exists.
+      - name: moving_avg_30d
+        description: Average close over the last 30 trading days, including the current one. Check days_in_30d_window before relying on it.
+      - name: days_in_30d_window
+        description: Number of trading days actually available in the 30-day window. Below 30 means moving_avg_30d is based on partial history.
+
+  - name: mart_symbol_summary
+    description: One row per symbol summarizing the full price history in the warehouse, for dashboards and quick comparisons.
+    columns:
+      - name: symbol
+        data_tests:
+          - unique
+          - not_null
+      - name: sector
+        description: Null means the symbol is missing from the symbols seed.
+        data_tests:
+          - not_null
+      - name: daily_volatility
+        description: Sample standard deviation of daily_return. Higher values mean bigger day-to-day price swings. Null with fewer than three trading days.

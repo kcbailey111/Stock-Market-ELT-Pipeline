@@ -1,0 +1,23 @@
+# Declares the raw table that pipeline.py loads, so models can use source() instead of a hardcoded name.
+# The freshness block checks that loaded_at is recent: warn after 3 days, fail after 7.
+
+version: 2
+
+sources:
+  - name: raw
+    description: Raw tables loaded by pipeline.py from the Alpha Vantage TIME_SERIES_DAILY endpoint.
+    schema: main
+    loaded_at_field: loaded_at
+    freshness:
+      warn_after: {count: 3, period: day}
+      error_after: {count: 7, period: day}
+    tables:
+      - name: stock_metrics
+        description: One row per symbol per trading day, appended by an idempotent upsert on (date, symbol).
+        columns:
+          - name: date
+            data_tests:
+              - not_null
+          - name: symbol
+            data_tests:
+              - not_null
